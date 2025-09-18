@@ -40,6 +40,13 @@ jobs:
           rm -rf Pods Podfile.lock Runner.xcworkspace
           cd ..
 
+      - name: Install compatible CocoaPods
+        run: |
+          sudo gem uninstall cocoapods -a -Ix || true
+          sudo gem install cocoapods -v 1.15.2 -N
+          sudo gem install xcodeproj -v 1.24.0 -N
+          pod --versio
+
       # 👇 Add these steps here
       - name: Setup CocoaPods
         run: |
