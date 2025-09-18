@@ -1,4 +1,4 @@
-name: Build iOS App (Unsigned)
+name: Build Flutter iOS App (Unsigned)
 
 on:
   push:
@@ -12,61 +12,35 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Setup Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.35.4'
           channel: 'stable'
 
-      - name: Install Flutter dependencies
+      # 3️⃣ Install Flutter dependencies
+      - name: Flutter pub get
         run: flutter pub get
 
-        # 👇 Add this before installing pods
-      - name: Flutter Precache iOS
+      # 4️⃣ Precache iOS artifacts (Xcode simulator + device tools)
+      - name: Flutter precache iOS
         run: flutter precache --ios
 
-      - name: Reinstall CocoaPods
-        run: |
-          sudo gem uninstall cocoapods -a -Ix || true
-          sudo gem install cocoapods -N
-          pod --version
+      # 5️⃣ Clean old builds
+      - name: Flutter clean
+        run: flutter clean
 
-      - name: Clean iOS Pods
-        run: |
-          cd ios
-          rm -rf Pods Podfile.lock Runner.xcworkspace
-          cd ..
-
-      - name: Install compatible CocoaPods
-        run: |
-          sudo gem uninstall cocoapods -a -Ix || true
-          sudo gem install cocoapods -v 1.15.2 -N
-          sudo gem install xcodeproj -v 1.24.0 -N
-          pod --version
-
-      # 👇 Add these steps here
-      - name: Setup CocoaPods
-        run: |
-          sudo gem install cocoapods -N
-          pod setup
-
-      - name: Install CocoaPods dependencies
-        run: |
-          cd ios
-          pod repo update
-          pod install --verbose
-          cd ..
-
-      # 👇 Then continue with the Flutter iOS build
+      # 6️⃣ Build iOS unsigned app (avoids CocoaPods issues)
       - name: Build Flutter iOS (unsigned)
-        run: |
-          echo "🔨 Building Flutter iOS app..."
-          flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign
 
-      - name: Create IPA from Flutter build
+      # 7️⃣ Create unsigned IPA
+      - name: Package unsigned IPA
         run: |
           APP_PATH="build/ios/iphoneos/Runner.app"
           if [ -d "$APP_PATH" ]; then
@@ -83,17 +57,10 @@ jobs:
             exit 1
           fi
 
-      - name: Upload IPA artifact
+      # 8️⃣ Upload IPA artifact
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: ios-app-unsigned
           path: artifacts/*.ipa
-          retention-days: 30
-
-      - name: Upload app bundle (alternative)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-app-bundle
-          path: build/ios/iphoneos/Runner.app
           retention-days: 30
