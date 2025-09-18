@@ -45,7 +45,7 @@ jobs:
           sudo gem uninstall cocoapods -a -Ix || true
           sudo gem install cocoapods -v 1.15.2 -N
           sudo gem install xcodeproj -v 1.24.0 -N
-          pod --versio
+          pod --version
 
       # 👇 Add these steps here
       - name: Setup CocoaPods
