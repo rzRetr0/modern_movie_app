@@ -24,13 +24,20 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+      # 👇 Add these steps here
+      - name: Setup CocoaPods
+        run: |
+          sudo gem install cocoapods -N
+          pod setup
+
       - name: Install CocoaPods dependencies
         run: |
           cd ios
-          echo "📦 Installing CocoaPods dependencies..."
-          pod install --repo-update
+          pod repo update
+          pod install --verbose
           cd ..
 
+      # 👇 Then continue with the Flutter iOS build
       - name: Build Flutter iOS (unsigned)
         run: |
           echo "🔨 Building Flutter iOS app..."
