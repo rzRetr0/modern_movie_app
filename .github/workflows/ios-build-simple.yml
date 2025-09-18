@@ -1,66 +1,66 @@
-name: Build iOS App (Simple - No CocoaPods)
+name: Build Flutter iOS App (Unsigned, CocoaPods-free)
 
 on:
-   push:
-     branches: [ main, develop ]
-   pull_request:
-     branches: [ main ]
-   workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-   build-ios-simple:
-     runs-on: macos-latest
+  build-ios:
+    runs-on: macos-latest
 
-     steps:
-     - name: Checkout repository
-       uses: actions/checkout@v4
+    steps:
+      # 1️⃣ Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-     - name: Setup Flutter
-       uses: subosito/flutter-action@v2
-       with:
-         flutter-version: '3.35.4'
-         channel: 'stable'
+      # 2️⃣ Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.4'
+          channel: 'stable'
 
-     - name: Install Flutter dependencies
-       run: flutter pub get
+      # 3️⃣ Install Flutter dependencies
+      - name: Flutter pub get
+        run: flutter pub get
 
-     - name: Build Flutter iOS (No CocoaPods)
-       run: |
-         echo "🔨 Building Flutter iOS app without CocoaPods..."
-         flutter build ios --release --no-codesign
+      # 4️⃣ Precache iOS artifacts
+      - name: Flutter precache iOS
+        run: flutter precache --ios
 
-     - name: Create IPA from Flutter build
-       run: |
-         # Check if the app was built successfully
-         if [ -d "build/ios/Release-iphoneos/Runner.app" ]; then
-           echo "✅ Flutter build successful"
-           mkdir -p Payload
-           cp -r build/ios/Release-iphoneos/Runner.app Payload/
-           zip -r ios-app-simple.ipa Payload
-           mkdir -p artifacts
-           mv ios-app-simple.ipa artifacts/
-           echo "✅ IPA created successfully"
-         else
-           echo "❌ Flutter build failed - checking alternative location..."
-           if [ -d "ios/build/Release-iphoneos/Runner.app" ]; then
-             echo "✅ Found app in ios/build location"
-             mkdir -p Payload
-             cp -r ios/build/Release-iphoneos/Runner.app Payload/
-             zip -r ios-app-simple.ipa Payload
-             mkdir -p artifacts
-             mv ios-app-simple.ipa artifacts/
-             echo "✅ IPA created from ios/build location"
-           else
-             echo "❌ Build failed completely"
-             ls -la build/ 2>/dev/null || echo "No build directory"
-             ls -la ios/build/ 2>/dev/null || echo "No ios/build directory"
-             exit 1
-           fi
-         fi
+      # 5️⃣ Clean old builds
+      - name: Flutter clean
+        run: flutter clean
 
-     - name: Upload IPA artifact
-       uses: actions/upload-artifact@v4
-       with:
-         name: ios-app-simple
-         path: artifacts/*.ipa
-         retention-days: 30
+      # 6️⃣ Build iOS app for simulator (no CocoaPods, no codesign)
+      - name: Build iOS simulator app (unsigned)
+        run: flutter build ios --simulator --no-codesign
+
+      # 7️⃣ Create unsigned IPA from simulator build
+      - name: Package unsigned IPA
+        run: |
+          APP_PATH="build/ios/iphonesimulator/Runner.app"
+          if [ -d "$APP_PATH" ]; then
+            echo "✅ Flutter simulator build successful"
+            mkdir -p Payload
+            cp -r "$APP_PATH" Payload/
+            zip -r ios-app-unsigned.ipa Payload
+            mkdir -p artifacts
+            mv ios-app-unsigned.ipa artifacts/
+            echo "✅ IPA created successfully"
+          else
+            echo "❌ Runner.app not found"
+            find build -name "Runner.app" -print
+            exit 1
+          fi
+
+      # 8️⃣ Upload IPA artifact
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app-unsigned
+          path: artifacts/*.ipa
+          retention-days: 30
