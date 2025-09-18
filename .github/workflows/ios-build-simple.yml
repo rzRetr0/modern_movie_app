@@ -1,0 +1,66 @@
+name: Build iOS App (Simple - No CocoaPods)
+
+on:
+   push:
+     branches: [ main, develop ]
+   pull_request:
+     branches: [ main ]
+   workflow_dispatch:
+
+jobs:
+   build-ios-simple:
+     runs-on: macos-latest
+
+     steps:
+     - name: Checkout repository
+       uses: actions/checkout@v4
+
+     - name: Setup Flutter
+       uses: subosito/flutter-action@v2
+       with:
+         flutter-version: '3.24.0'
+         channel: 'stable'
+
+     - name: Install Flutter dependencies
+       run: flutter pub get
+
+     - name: Build Flutter iOS (No CocoaPods)
+       run: |
+         echo "🔨 Building Flutter iOS app without CocoaPods..."
+         flutter build ios --release --no-codesign
+
+     - name: Create IPA from Flutter build
+       run: |
+         # Check if the app was built successfully
+         if [ -d "build/ios/Release-iphoneos/Runner.app" ]; then
+           echo "✅ Flutter build successful"
+           mkdir -p Payload
+           cp -r build/ios/Release-iphoneos/Runner.app Payload/
+           zip -r ios-app-simple.ipa Payload
+           mkdir -p artifacts
+           mv ios-app-simple.ipa artifacts/
+           echo "✅ IPA created successfully"
+         else
+           echo "❌ Flutter build failed - checking alternative location..."
+           if [ -d "ios/build/Release-iphoneos/Runner.app" ]; then
+             echo "✅ Found app in ios/build location"
+             mkdir -p Payload
+             cp -r ios/build/Release-iphoneos/Runner.app Payload/
+             zip -r ios-app-simple.ipa Payload
+             mkdir -p artifacts
+             mv ios-app-simple.ipa artifacts/
+             echo "✅ IPA created from ios/build location"
+           else
+             echo "❌ Build failed completely"
+             ls -la build/ 2>/dev/null || echo "No build directory"
+             ls -la ios/build/ 2>/dev/null || echo "No ios/build directory"
+             exit 1
+           fi
+         fi
+
+     - name: Upload IPA artifact
+       uses: actions/upload-artifact@v4
+       with:
+         name: ios-app-simple
+         path: artifacts/*.ipa
+         retention-days: 30

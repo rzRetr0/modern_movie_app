@@ -90,9 +90,11 @@ The repository includes a comprehensive GitHub Actions workflow for building IPA
 ### Workflow Features
 
 - **Automated builds** on push to main/develop branches
-- **Code analysis** and testing
-- **iOS app building** (both debug and release)
-- **Unsigned IPA generation** for testing and development
+- **Two build options**:
+  - `ios-build.yml`: Standard build with CocoaPods fallback
+  - `ios-build-simple.yml`: Simplified build without CocoaPods
+- **iOS app building** (release, unsigned)
+- **IPA generation** for testing and development
 - **Artifact upload** for easy distribution
 
 ### Setup for Automated Builds
