@@ -1,78 +1,69 @@
 name: Build iOS App (Unsigned)
 
 on:
-   push:
-     branches: [ main, develop ]
-   pull_request:
-     branches: [ main ]
-   workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-   build-ios:
-     runs-on: macos-latest
+  build-ios:
+    runs-on: macos-latest
 
-     steps:
-     - name: Checkout repository
-       uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-     - name: Setup Flutter
-       uses: subosito/flutter-action@v2
-       with:
-         flutter-version: '3.24.0'
-         channel: 'stable'
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
 
-     - name: Install Flutter dependencies
-       run: flutter pub get
+      - name: Install Flutter dependencies
+        run: flutter pub get
 
-     - name: Build Flutter iOS (with CocoaPods)
-       run: |
-         # Try with CocoaPods first
-         cd ios
-         if command -v pod >/dev/null 2>&1; then
-           echo "📦 Installing CocoaPods dependencies..."
-           pod install || echo "⚠️  CocoaPods failed, continuing without..."
-         else
-           echo "⚠️  CocoaPods not available, skipping..."
-         fi
-         cd ..
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          echo "📦 Installing CocoaPods dependencies..."
+          pod install --repo-update
+          cd ..
 
-         # Build with Flutter
-         echo "🔨 Building Flutter iOS app..."
-         flutter build ios --release --no-codesign
+      - name: Build Flutter iOS (unsigned)
+        run: |
+          echo "🔨 Building Flutter iOS app..."
+          flutter build ios --release --no-codesign
 
-     - name: Create IPA from Flutter build
-       run: |
-         cd ios
-         # Check if the app was built successfully
-         if [ -d "build/Release-iphoneos/Runner.app" ]; then
-           echo "✅ Flutter build successful"
-           mkdir -p Payload
-           cp -r build/Release-iphoneos/Runner.app Payload/
-           zip -r ../ios-app-unsigned.ipa Payload
-           cd ..
-           mkdir -p artifacts
-           mv ios-app-unsigned.ipa artifacts/
-           echo "✅ IPA created successfully"
-         else
-           echo "❌ Flutter build failed - Runner.app not found"
-           ls -la build/
-           exit 1
-         fi
+      - name: Create IPA from Flutter build
+        run: |
+          APP_PATH="build/ios/iphoneos/Runner.app"
+          if [ -d "$APP_PATH" ]; then
+            echo "✅ Flutter build successful"
+            mkdir -p Payload
+            cp -r "$APP_PATH" Payload/
+            zip -r ios-app-unsigned.ipa Payload
+            mkdir -p artifacts
+            mv ios-app-unsigned.ipa artifacts/
+            echo "✅ IPA created successfully"
+          else
+            echo "❌ Runner.app not found"
+            find build -name "Runner.app" -print
+            exit 1
+          fi
 
-     - name: Upload IPA artifact
-       uses: actions/upload-artifact@v4
-       with:
-         name: ios-app-unsigned
-         path: artifacts/*.ipa
-         retention-days: 30
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app-unsigned
+          path: artifacts/*.ipa
+          retention-days: 30
 
-     - name: Upload app bundle (alternative)
-       if: failure()
-       uses: actions/upload-artifact@v4
-       with:
-         name: ios-app-bundle
-         path: ios/build/Release-iphoneos/Runner.app
-         retention-days: 30
-
-
-
+      - name: Upload app bundle (alternative)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app-bundle
+          path: build/ios/iphoneos/Runner.app
+          retention-days: 30
