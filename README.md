@@ -92,45 +92,25 @@ The repository includes a comprehensive GitHub Actions workflow for building IPA
 - **Automated builds** on push to main/develop branches
 - **Code analysis** and testing
 - **iOS app building** (both debug and release)
-- **IPA generation** with proper signing
+- **Unsigned IPA generation** for testing and development
 - **Artifact upload** for easy distribution
 
 ### Setup for Automated Builds
 
-1. **Repository Secrets**
-   Add the following secrets to your GitHub repository:
-
-   ```
-   BUILD_CERTIFICATE_BASE64    # Base64 encoded .p12 certificate
-   P12_PASSWORD               # Password for the .p12 certificate
-   KEYCHAIN_PASSWORD          # Password for the keychain
-   PROVISIONING_PROFILE_BASE64 # Base64 encoded provisioning profile
-   PROVISIONING_PROFILE_SPECIFIER # Provisioning profile specifier
-   CODE_SIGN_IDENTITY         # Code signing identity
-   DEVELOPMENT_TEAM           # Apple Developer Team ID
-   ```
-
-2. **Update ExportOptions.plist**
-   - Replace `YOUR_TEAM_ID` with your actual Apple Developer Team ID
-   - Adjust export options as needed
-
-3. **Workflow Triggers**
-   - The workflow runs automatically on pushes to `main` and `develop` branches
-   - Manual triggers are also available via GitHub Actions UI
+1. **No certificates required** - builds are unsigned
+2. **Workflow Triggers**
+    - The workflow runs automatically on pushes to `main` and `develop` branches
+    - Manual triggers are also available via GitHub Actions UI
 
 ### Building IPA Files
 
-The workflow creates two types of builds:
+The workflow creates **unsigned builds**:
 
-1. **Unsigned Build** (for testing)
-   - Runs on all branches
-   - Creates unsigned IPA files
-   - Good for internal testing
-
-2. **Signed Build** (for distribution)
-   - Runs only on `main` branch
-   - Requires proper certificates and provisioning profiles
-   - Creates signed IPA files ready for TestFlight/App Store
+1. **Unsigned Build** (for testing and development)
+    - Runs on all branches
+    - Creates unsigned IPA files
+    - Good for internal testing and development
+    - Can be installed on jailbroken devices or via third-party tools
 
 ## Project Structure
 
