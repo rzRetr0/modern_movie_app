@@ -24,6 +24,16 @@ jobs:
       - name: Install Flutter dependencies
         run: flutter pub get
 
+        # 👇 Add this before installing pods
+      - name: Flutter Precache iOS
+        run: flutter precache --ios
+
+      - name: Reinstall CocoaPods
+        run: |
+          sudo gem uninstall cocoapods -a -Ix || true
+          sudo gem install cocoapods -N
+          pod --version
+
       # 👇 Add these steps here
       - name: Setup CocoaPods
         run: |
