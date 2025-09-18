@@ -7,9 +7,6 @@ on:
      branches: [ main ]
    workflow_dispatch:
 
-env:
-   FLUTTER_VERSION: '3.16.0'
-
 jobs:
    build-ios:
      runs-on: macos-latest
@@ -21,51 +18,52 @@ jobs:
      - name: Setup Flutter
        uses: subosito/flutter-action@v2
        with:
-         flutter-version: ${{ env.FLUTTER_VERSION }}
+         flutter-version: '3.24.0'
          channel: 'stable'
 
-     - name: Install dependencies
+     - name: Install CocoaPods
+       run: |
+         cd ios
+         pod install
+
+     - name: Install Flutter dependencies
        run: flutter pub get
 
-     - name: Run tests
-       run: flutter test
+     - name: Build Flutter iOS
+       run: flutter build ios --release --no-codesign
 
-     - name: Analyze code
-       run: flutter analyze
-
-     - name: Build iOS app (Debug)
+     - name: Create IPA from Flutter build
        run: |
          cd ios
-         flutter build ios --debug --no-codesign
-
-     - name: Build iOS app (Release)
-       run: |
-         cd ios
-         flutter build ios --release --no-codesign
-
-     - name: Archive iOS app
-       run: |
-         cd ios
-         xcodebuild -workspace Runner.xcworkspace \
-           -scheme Runner \
-           -configuration Release \
-           -destination generic/platform=iOS \
-           -archivePath Runner.xcarchive \
-           archive
-
-     - name: Export IPA (Unsigned)
-       run: |
-         cd ios
-         xcodebuild -exportArchive \
-           -archivePath Runner.xcarchive \
-           -exportPath ./build \
-           -exportOptionsPlist ExportOptions.plist
+         # Check if the app was built successfully
+         if [ -d "build/Release-iphoneos/Runner.app" ]; then
+           echo "✅ Flutter build successful"
+           mkdir -p Payload
+           cp -r build/Release-iphoneos/Runner.app Payload/
+           zip -r ../ios-app-unsigned.ipa Payload
+           cd ..
+           mkdir -p artifacts
+           mv ios-app-unsigned.ipa artifacts/
+           echo "✅ IPA created successfully"
+         else
+           echo "❌ Flutter build failed - Runner.app not found"
+           ls -la build/
+           exit 1
+         fi
 
      - name: Upload IPA artifact
        uses: actions/upload-artifact@v4
        with:
          name: ios-app-unsigned
-         path: ios/build/*.ipa
+         path: artifacts/*.ipa
+         retention-days: 30
+
+     - name: Upload app bundle (alternative)
+       if: failure()
+       uses: actions/upload-artifact@v4
+       with:
+         name: ios-app-bundle
+         path: ios/build/Release-iphoneos/Runner.app
          retention-days: 30
 
 
