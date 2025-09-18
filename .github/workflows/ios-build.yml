@@ -34,6 +34,12 @@ jobs:
           sudo gem install cocoapods -N
           pod --version
 
+      - name: Clean iOS Pods
+        run: |
+          cd ios
+          rm -rf Pods Podfile.lock Runner.xcworkspace
+          cd ..
+
       # 👇 Add these steps here
       - name: Setup CocoaPods
         run: |
