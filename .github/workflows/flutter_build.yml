@@ -15,17 +15,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.0'
 
-      - run: flutter pub get
+      - name: Install dependencies
+        run: flutter pub get
 
-      - run: flutter build apk --release
+      - name: Build APK
+        run: flutter build apk --release
 
-      - run: flutter build appbundle --release
+      - name: Build AppBundle
+        run: flutter build appbundle --release
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: android-builds
           path: |
@@ -39,16 +44,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.0'
 
-      - name: Flutter precache
-        run: flutter precache
-        shell: bash
-
       - name: Install Flutter dependencies
         run: flutter pub get
+        shell: bash
+
+      - name: Flutter precache
+        run: flutter precache
         shell: bash
 
       - name: Clean Flutter project
@@ -72,7 +78,8 @@ jobs:
         run: flutter build ipa --export-options-plist=ios/ExportOptions.plist --no-codesign
         shell: bash
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
           path: build/ios/ipa/*.ipa
