@@ -1,0 +1,137 @@
+workflows:
+  # iOS build workflow
+  ios-workflow:
+    name: iOS Build
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up Flutter
+        script: |
+          flutter pub get
+
+      - name: Build iOS
+        script: |
+          flutter build ios --release --no-codesign
+
+      - name: Create IPA
+        script: |
+          # Create IPA structure
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+
+          # Create IPA file
+          zip -r merl-cinema-ios.ipa Payload/
+
+          # Show IPA info
+          ls -la *.ipa
+          echo "IPA size:"
+          du -h *.ipa
+
+    artifacts:
+      - build/ios/**/*.app
+      - build/ios/**/*.ipa
+      - *.ipa
+
+  # Android build workflow
+  android-workflow:
+    name: Android Build
+    instance_type: linux_x2
+    max_build_duration: 20
+    environment:
+      flutter: stable
+      java: "17"
+    scripts:
+      - name: Set up Flutter
+        script: |
+          flutter pub get
+
+      - name: Build Android APK
+        script: |
+          flutter build apk --release
+
+      - name: Build Android AAB
+        script: |
+          flutter build appbundle --release
+
+    artifacts:
+      - build/app/outputs/**/*.apk
+      - build/app/outputs/**/*.aab
+
+  # Web build workflow
+  web-workflow:
+    name: Web Build
+    instance_type: linux_x2
+    max_build_duration: 15
+    environment:
+      flutter: stable
+    scripts:
+      - name: Set up Flutter
+        script: |
+          flutter pub get
+
+      - name: Build Web
+        script: |
+          flutter build web --release
+
+    artifacts:
+      - build/web/**/*
+
+  # All platforms workflow
+  all-platforms:
+    name: Build All Platforms
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      java: "17"
+    scripts:
+      - name: Set up Flutter
+        script: |
+          flutter pub get
+
+      - name: Build Web
+        script: |
+          flutter build web --release
+
+      - name: Build Android
+        script: |
+          flutter build apk --release
+          flutter build appbundle --release
+
+      - name: Build iOS
+        script: |
+          flutter build ios --release --no-codesign
+
+          # Create IPA
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -r merl-cinema-ios.ipa Payload/
+
+    artifacts:
+      - build/web/**/*
+      - build/app/outputs/**/*.apk
+      - build/app/outputs/**/*.aab
+      - build/ios/**/*.app
+      - *.ipa
+
+# Publishing configuration (optional)
+publishing:
+  google_play:
+    credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+    track: internal
+
+  app_store_connect:
+    api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+    key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+    issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+
+# Testing configuration
+testing:
+  flutter:
+    test_timeout: 15

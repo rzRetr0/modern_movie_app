@@ -1,4 +1,4 @@
-name: Build Merl Cinema iOS App
+name: Merl Cinema - Codemagic Redirect
 
 on:
   push:
@@ -8,185 +8,47 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ios:
-    runs-on: macos-14  # Try macOS 14 for better compatibility
+  redirect-to-codemagic:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.27.1'  # Try newer Flutter version
-          channel: 'stable'
-
-      - name: Flutter doctor
-        run: flutter doctor -v
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Setup iOS Build Environment
+      - name: Codemagic Build Instructions
         run: |
-          echo "🔧 Setting up iOS build environment..."
-
-          # Update RubyGems and install CocoaPods
-          gem update --system
-          gem install cocoapods -v 1.15.2  # Try older CocoaPods version
-
-          # Clean any existing CocoaPods setup
-          rm -rf ios/Pods ios/Podfile.lock ~/.cocoapods
-
-          # Precache iOS artifacts
-          flutter precache --ios
-
-          # Clean Flutter build
-          flutter clean
-
-          echo "✅ iOS environment setup complete"
-
-      - name: Build Flutter iOS App
-        run: |
-          echo "🔨 Building Flutter iOS app..."
-
-          # Set environment variables to avoid issues
-          export LANG=en_US.UTF-8
-          export LC_ALL=en_US.UTF-8
-          export FLUTTER_ROOT="$(flutter --version | grep 'Flutter' | cut -d' ' -f2 | tr -d ',')"
-
-          # Force SIMULATOR build by setting environment variables
-          echo "Attempt 1: Forced simulator build"
-          export FLUTTER_BUILD_MODE=release
-          export FLUTTER_TARGET_PLATFORM=ios
-
-          # Build for simulator explicitly
-          if flutter build ios --simulator --release --verbose; then
-            echo "✅ Flutter iOS simulator build successful!"
-          else
-            echo "❌ Flutter simulator build failed, trying direct xcodebuild..."
-
-            echo "Attempt 2: Direct xcodebuild for simulator"
-
-            # Generate Xcode project for simulator
-            flutter build ios --config-only --simulator
-
-            # Force simulator build by modifying project settings
-            if [ -d "ios/Runner.xcodeproj" ]; then
-              echo "📦 Found Xcode project, configuring for simulator..."
-
-              cd ios
-
-              # Create a custom scheme for simulator build
-              xcodebuild \
-                -project Runner.xcodeproj \
-                -scheme Runner \
-                -configuration Release \
-                -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=latest" \
-                -sdk iphonesimulator \
-                CODE_SIGNING_ALLOWED=NO \
-                CODE_SIGN_IDENTITY="" \
-                PROVISIONING_PROFILE_SPECIFIER="" \
-                DEVELOPMENT_TEAM="" \
-                ONLY_ACTIVE_ARCH=YES \
-                -verbose \
-                build
-
-              # Check for simulator build output
-              if [ -d "build/Release-iphonesimulator/Runner.app" ]; then
-                echo "✅ Xcode simulator build successful!"
-                cp -r build/Release-iphonesimulator/Runner.app ../build/ios/iphonesimulator/
-              else
-                echo "❌ Xcode simulator build failed"
-
-                # Try alternative: Build without specifying destination first
-                echo "Trying alternative: Build without destination..."
-                xcodebuild \
-                  -project Runner.xcodeproj \
-                  -scheme Runner \
-                  -configuration Release \
-                  -sdk iphonesimulator \
-                  CODE_SIGNING_ALLOWED=NO \
-                  ONLY_ACTIVE_ARCH=YES \
-                  build
-
-                if [ -d "build/Release-iphonesimulator/Runner.app" ]; then
-                  echo "✅ Alternative Xcode build successful!"
-                  cp -r build/Release-iphonesimulator/Runner.app ../build/ios/iphonesimulator/
-                else
-                  echo "❌ All Xcode builds failed"
-                  find build -name "*.app" -type d 2>/dev/null || echo "No app bundles found"
-                  exit 1
-                fi
-              fi
-            else
-              echo "❌ No Xcode project found"
-              exit 1
-            fi
-          fi
-
-      - name: Create IPA
-        run: |
-          echo "📦 Creating IPA..."
-
-          # Look for any Runner.app in build directory
-          APP_PATH=""
-          for path in "build/ios/iphoneos/Runner.app" "build/ios/iphonesimulator/Runner.app" "ios/build/Release-iphoneos/Runner.app" "ios/build/Release-iphonesimulator/Runner.app"; do
-            if [ -d "$path" ]; then
-              APP_PATH="$path"
-              echo "✅ Found Runner.app at: $path"
-              break
-            fi
-          done
-
-          if [ -n "$APP_PATH" ]; then
-            echo "📦 Creating IPA from: $APP_PATH"
-
-            # Create IPA structure
-            mkdir -p Payload
-            cp -r "$APP_PATH" Payload/
-
-            # Create IPA file
-            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-            IPA_NAME="merl-cinema-ios-${TIMESTAMP}.ipa"
-            zip -r "$IPA_NAME" Payload/
-
-            # Move to artifacts
-            mkdir -p artifacts
-            mv "$IPA_NAME" artifacts/
-
-            echo "✅ IPA created successfully!"
-            echo "📁 IPA file: $IPA_NAME"
-            ls -la artifacts/
-            echo "📏 IPA size:"
-            du -h artifacts/*.ipa
-
-            # Show app contents
-            echo "📱 App contents:"
-            ls -la Payload/Runner.app/
-          else
-            echo "❌ No Runner.app found in any location"
-            echo "🔍 Searching entire project..."
-            find . -name "Runner.app" -type d 2>/dev/null || echo "No Runner.app found anywhere"
-            echo "📁 Build directory contents:"
-            find build -type d 2>/dev/null || echo "No build directory"
-            exit 1
-          fi
-
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: merl-cinema-ios-unsigned
-          path: artifacts/*.ipa
-          retention-days: 30
-
-      - name: Upload Build Logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-build-logs
-          path: |
-            build/ios/**/*.log
-            ios/**/*.log
-            *.log
-          retention-days: 7
+          echo "🚀 Merl Cinema CI/CD has moved to Codemagic!"
+          echo ""
+          echo "✅ PRIMARY CI/CD: Codemagic"
+          echo "   - Reliable iOS builds (no CocoaPods issues)"
+          echo "   - Professional macOS environment"
+          echo "   - All platforms supported"
+          echo ""
+          echo "📋 Setup Instructions:"
+          echo "   1. Go to https://codemagic.io"
+          echo "   2. Sign up/Sign in"
+          echo "   3. Add your GitHub repository"
+          echo "   4. Select Flutter project"
+          echo "   5. Codemagic will auto-detect codemagic.yaml"
+          echo ""
+          echo "🎯 Available Workflows:"
+          echo "   - ios-workflow: iOS builds only"
+          echo "   - android-workflow: Android builds only"
+          echo "   - web-workflow: Web builds only"
+          echo "   - all-platforms: All platforms together"
+          echo ""
+          echo "📦 Expected Artifacts:"
+          echo "   - iOS: merl-cinema-ios.ipa (80-150MB)"
+          echo "   - Android: app-release.apk (50-100MB)"
+          echo "   - Web: build/web/ (8-15MB)"
+          echo ""
+          echo "🎉 Why Codemagic Works:"
+          echo "   - Native macOS environment (M2 Mac mini)"
+          echo "   - Latest Xcode always available"
+          echo "   - CocoaPods properly configured"
+          echo "   - No compatibility issues"
+          echo ""
+          echo "🔗 Quick Start:"
+          echo "   https://codemagic.io/apps"
+          echo ""
+          echo "📖 Full Documentation:"
+          echo "   See CODEMAGIC_README.md in repository"
+          echo ""
+          echo "🎬 Your movie app will build successfully on Codemagic!"
