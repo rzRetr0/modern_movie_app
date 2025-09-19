@@ -37,6 +37,42 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+
+      - name: Flutter precache
+        run: flutter precache
+        shell: bash
+
+      - name: Flutter pub get
+        run: flutter pub get
+        shell: bash
+
+      - name: Clean Flutter project
+        run: flutter clean
+        shell: bash
+
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods
+
+      - name: Prepare iOS
+        run: |
+          cd ios
+          rm -rf Pods Podfile.lock
+          rm -rf ~/Library/Developer/Xcode/DerivedData/*
+          pod repo update
+          pod install --repo-update
+        shell: bash
+
+      - name: Build IPA
+        run: flutter build ipa --export-options-plist=ios/ExportOptions.plist --no-codesign
+        shell: bash
+
       - uses: actions/checkout@v4
 
       - uses: subosito/flutter-action@v2
