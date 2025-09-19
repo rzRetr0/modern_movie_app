@@ -1,4 +1,4 @@
-name: Build Merl Cinema iOS App (No CocoaPods)
+name: Build Merl Cinema iOS App (Unsigned IPA)
 
 on:
   push:
@@ -35,85 +35,62 @@ jobs:
       - name: Flutter precache iOS
         run: flutter precache --ios
 
-      # 5️⃣ Fix CocoaPods/xcodeproj compatibility
-      - name: Fix CocoaPods Compatibility
-        run: |
-          echo "🔧 Fixing CocoaPods/xcodeproj compatibility..."
-
-          # Update RubyGems
-          gem update --system
-
-          # Update xcodeproj gem to latest version
-          gem install xcodeproj
-
-          # Update CocoaPods
-          gem install cocoapods
-
-          # Clean CocoaPods cache
-          rm -rf ~/.cocoapods/repos/master
-
-          # Re-setup CocoaPods repo
-          pod setup
-
-          echo "✅ CocoaPods compatibility fixed"
-
-      # 6️⃣ Clean old builds
+      # 5️⃣ Clean old builds
       - name: Flutter clean
         run: flutter clean
 
-      # 7️⃣ Build iOS app (force bypass CocoaPods)
-      - name: Build Flutter iOS (force bypass)
+      # 6️⃣ Build unsigned iOS app
+      - name: Build Flutter iOS (unsigned)
         run: |
-          echo "🔨 Building Flutter iOS app (force bypass CocoaPods)..."
+          echo "🔨 Building unsigned Flutter iOS app..."
 
-          # Force disable CocoaPods by removing Podfile completely
+          # Create backup of Podfile if it exists
           if [ -f "ios/Podfile" ]; then
-            rm ios/Podfile
-            echo "🗑️  Podfile removed to force CocoaPods bypass"
+            cp ios/Podfile ios/Podfile.backup
+            echo "📦 Podfile backed up"
           fi
 
-          # Build with Flutter (should skip CocoaPods entirely)
-          flutter build ios --release --no-codesign --verbose
+          # Build unsigned iOS app
+          flutter build ios --release --no-codesign
 
-          # Restore Podfile for future use
+          # Restore Podfile
           if [ -f "ios/Podfile.backup" ]; then
-            cp ios/Podfile.backup ios/Podfile
-            echo "📦 Podfile restored from backup"
+            mv ios/Podfile.backup ios/Podfile
+            echo "📦 Podfile restored"
           fi
 
-      # 7️⃣ Create unsigned IPA (check multiple possible paths)
+      # 7️⃣ Create unsigned IPA
       - name: Package unsigned IPA
         run: |
-          # Check multiple possible build paths
-          POSSIBLE_PATHS=(
-            "build/ios/iphoneos/Runner.app"
-            "build/ios/Release-iphoneos/Runner.app"
-            "ios/build/Release-iphoneos/Runner.app"
-          )
+          echo "📦 Creating unsigned IPA..."
 
-          APP_PATH=""
-          for path in "${POSSIBLE_PATHS[@]}"; do
-            if [ -d "$path" ]; then
-              APP_PATH="$path"
-              echo "✅ Found Runner.app at: $path"
-              break
-            fi
-          done
+          # Standard Flutter iOS build output path
+          APP_PATH="build/ios/iphoneos/Runner.app"
 
-          if [ -n "$APP_PATH" ]; then
+          if [ -d "$APP_PATH" ]; then
+            echo "✅ Found Runner.app at: $APP_PATH"
+
+            # Create IPA structure
             mkdir -p Payload
             cp -r "$APP_PATH" Payload/
-            zip -r ios-app-unsigned.ipa Payload
+
+            # Create IPA file
+            zip -r ios-app-unsigned.ipa Payload/
+
+            # Move to artifacts
             mkdir -p artifacts
             mv ios-app-unsigned.ipa artifacts/
-            echo "✅ IPA created successfully from $APP_PATH"
+
+            echo "✅ IPA created successfully!"
             ls -la artifacts/
+            echo "📏 IPA size:"
+            du -h artifacts/*.ipa
           else
-            echo "❌ Runner.app not found in any expected location"
-            echo "🔍 Searching for Runner.app in entire build directory..."
-            find . -name "Runner.app" -type d 2>/dev/null || echo "No Runner.app found"
-            echo "📁 Build directory contents:"
-            find build -type f -name "*.app" 2>/dev/null || echo "No .app files found"
+            echo "❌ Runner.app not found at $APP_PATH"
+            echo "🔍 Build directory contents:"
+            find build -name "*.app" -type d 2>/dev/null || echo "No .app bundles found"
+            echo "📁 Full build directory:"
+            find build/ios -type d -name "*Runner*" 2>/dev/null || echo "No Runner directories found"
             exit 1
           fi
 
