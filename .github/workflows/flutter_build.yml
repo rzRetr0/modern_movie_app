@@ -62,16 +62,21 @@ jobs:
         run: flutter clean
         shell: bash
 
+      - name: Install CocoaPods
+        run: sudo gem install cocoapods -v 1.17.0
+
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Prepare iOS
         run: |
-          flutter pub get
           flutter precache
           cd ios
           rm -rf Pods Podfile.lock
+          rm -rf ~/Library/Developer/Xcode/DerivedData/*
           pod repo update
           pod install --repo-update
         shell: bash
-
 
       - name: Build IPA
         run: |
