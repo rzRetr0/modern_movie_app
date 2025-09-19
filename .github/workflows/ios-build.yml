@@ -1,4 +1,4 @@
-name: Build Merl Cinema Apps
+name: Build Merl Cinema iOS App
 
 on:
   push:
@@ -8,69 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Web build (always works)
-  build-web:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Build Flutter Web
-        run: flutter build web --release
-
-      - name: Upload Web Build
-        uses: actions/upload-artifact@v4
-        with:
-          name: merl-cinema-web
-          path: build/web/
-          retention-days: 30
-
-  # Android build (works reliably)
-  build-android:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.0'
-          channel: 'stable'
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Build Android APK
-        run: flutter build apk --release
-
-      - name: Upload Android APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: merl-cinema-android
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
-
-  # iOS build (attempt with better error handling)
   build-ios:
-    runs-on: macos-13
+    runs-on: macos-14  # Try macOS 14 for better compatibility
 
     steps:
       - name: Checkout repository
@@ -79,57 +18,154 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.27.1'  # Try newer Flutter version
           channel: 'stable'
+
+      - name: Flutter doctor
+        run: flutter doctor -v
 
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Attempt iOS Build
-        continue-on-error: true
+      - name: Setup iOS Build Environment
         run: |
-          echo "🔨 Attempting Flutter iOS build..."
+          echo "🔧 Setting up iOS build environment..."
 
-          # Try the simplest possible iOS build
-          flutter build ios --release --no-codesign --verbose || echo "iOS build failed, but continuing..."
+          # Update RubyGems and install CocoaPods
+          gem update --system
+          gem install cocoapods -v 1.15.2  # Try older CocoaPods version
 
-      - name: Check for iOS Build Output
+          # Clean any existing CocoaPods setup
+          rm -rf ios/Pods ios/Podfile.lock ~/.cocoapods
+
+          # Precache iOS artifacts
+          flutter precache --ios
+
+          # Clean Flutter build
+          flutter clean
+
+          echo "✅ iOS environment setup complete"
+
+      - name: Build Flutter iOS App
         run: |
-          if [ -d "build/ios/iphoneos/Runner.app" ]; then
-            echo "✅ iOS build succeeded!"
-            ls -la build/ios/iphoneos/
+          echo "🔨 Building Flutter iOS app..."
 
-            # Create IPA
+          # Set environment variables to avoid issues
+          export LANG=en_US.UTF-8
+          export LC_ALL=en_US.UTF-8
+          export FLUTTER_ROOT="$(flutter --version | grep 'Flutter' | cut -d' ' -f2 | tr -d ',')"
+
+          # Try Flutter iOS build with different approaches
+          echo "Attempt 1: Standard Flutter build"
+          if flutter build ios --release --no-codesign --verbose; then
+            echo "✅ Flutter iOS build successful!"
+          else
+            echo "❌ Standard build failed, trying alternative..."
+
+            echo "Attempt 2: Config-only build then manual"
+            flutter build ios --config-only
+
+            # Try to build with xcodebuild directly
+            if [ -d "ios/Runner.xcodeproj" ]; then
+              echo "📦 Found Xcode project, trying xcodebuild..."
+
+              cd ios
+
+              # Clean and build with xcodebuild
+              xcodebuild clean -project Runner.xcodeproj -scheme Runner -configuration Release || true
+
+              # Try build without code signing
+              xcodebuild build \
+                -project Runner.xcodeproj \
+                -scheme Runner \
+                -configuration Release \
+                -destination "platform=iOS Simulator,name=iPhone 15,OS=latest" \
+                CODE_SIGNING_ALLOWED=NO \
+                CODE_SIGN_IDENTITY="" \
+                PROVISIONING_PROFILE="" \
+                DEVELOPMENT_TEAM="" \
+                -verbose
+
+              # Check if build succeeded
+              if [ -d "build/Release-iphonesimulator/Runner.app" ]; then
+                echo "✅ Xcode simulator build successful!"
+                cp -r build/Release-iphonesimulator/Runner.app ../build/ios/iphonesimulator/
+              elif [ -d "build/Release-iphoneos/Runner.app" ]; then
+                echo "✅ Xcode device build successful!"
+                cp -r build/Release-iphoneos/Runner.app ../build/ios/iphoneos/
+              else
+                echo "❌ Xcode build also failed"
+                find build -name "*.app" -type d 2>/dev/null || echo "No app bundles found"
+                exit 1
+              fi
+            else
+              echo "❌ No Xcode project found"
+              exit 1
+            fi
+          fi
+
+      - name: Create IPA
+        run: |
+          echo "📦 Creating IPA..."
+
+          # Look for any Runner.app in build directory
+          APP_PATH=""
+          for path in "build/ios/iphoneos/Runner.app" "build/ios/iphonesimulator/Runner.app" "ios/build/Release-iphoneos/Runner.app" "ios/build/Release-iphonesimulator/Runner.app"; do
+            if [ -d "$path" ]; then
+              APP_PATH="$path"
+              echo "✅ Found Runner.app at: $path"
+              break
+            fi
+          done
+
+          if [ -n "$APP_PATH" ]; then
+            echo "📦 Creating IPA from: $APP_PATH"
+
+            # Create IPA structure
             mkdir -p Payload
-            cp -r build/ios/iphoneos/Runner.app Payload/
+            cp -r "$APP_PATH" Payload/
+
+            # Create IPA file
             TIMESTAMP=$(date +%Y%m%d_%H%M%S)
             IPA_NAME="merl-cinema-ios-${TIMESTAMP}.ipa"
             zip -r "$IPA_NAME" Payload/
 
+            # Move to artifacts
             mkdir -p artifacts
             mv "$IPA_NAME" artifacts/
 
-            echo "✅ iOS IPA created!"
+            echo "✅ IPA created successfully!"
+            echo "📁 IPA file: $IPA_NAME"
             ls -la artifacts/
+            echo "📏 IPA size:"
+            du -h artifacts/*.ipa
+
+            # Show app contents
+            echo "📱 App contents:"
+            ls -la Payload/Runner.app/
           else
-            echo "❌ iOS build failed or incomplete"
-            echo "📝 iOS builds require local macOS development"
-            echo "💡 Use: flutter build ios (on Mac with Xcode)"
+            echo "❌ No Runner.app found in any location"
+            echo "🔍 Searching entire project..."
+            find . -name "Runner.app" -type d 2>/dev/null || echo "No Runner.app found anywhere"
+            echo "📁 Build directory contents:"
+            find build -type d 2>/dev/null || echo "No build directory"
+            exit 1
           fi
 
-      - name: Upload iOS Build (if exists)
-        if: success()
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: merl-cinema-ios
+          name: merl-cinema-ios-unsigned
           path: artifacts/*.ipa
           retention-days: 30
 
-      - name: iOS Build Instructions
-        if: failure()
-        run: |
-          echo "📱 iOS Build Instructions:"
-          echo "1. Use macOS with Xcode installed"
-          echo "2. Run: flutter build ios --release"
-          echo "3. Find IPA at: build/ios/iphoneos/Runner.app"
-          echo "4. Use Xcode to create signed IPA for distribution"
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs
+          path: |
+            build/ios/**/*.log
+            ios/**/*.log
+            *.log
+          retention-days: 7
