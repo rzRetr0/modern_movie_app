@@ -43,8 +43,8 @@ jobs:
           # Update RubyGems
           gem update --system
 
-          # Update xcodeproj gem to compatible version
-          gem install xcodeproj --version 1.27.1
+          # Update xcodeproj gem to latest version
+          gem install xcodeproj
 
           # Update CocoaPods
           gem install cocoapods
