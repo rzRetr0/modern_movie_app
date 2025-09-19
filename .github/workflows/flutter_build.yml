@@ -55,6 +55,13 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Clean and install pods
+        run: |
+            cd ios
+            rm -rf Pods Podfile.lock
+            pod repo update
+            pod install --repo-update
+
       - name: Fix iOS Pods
         run: |
           cd ios
