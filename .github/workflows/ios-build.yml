@@ -55,26 +55,26 @@ jobs:
           export LC_ALL=en_US.UTF-8
           export FLUTTER_ROOT="$(flutter --version | grep 'Flutter' | cut -d' ' -f2 | tr -d ',')"
 
-          # Try Flutter iOS build with different approaches
-          echo "Attempt 1: Standard Flutter build"
-          if flutter build ios --release --no-codesign --verbose; then
-            echo "✅ Flutter iOS build successful!"
+          # Try Flutter iOS build for SIMULATOR (no certificates needed)
+          echo "Attempt 1: Flutter simulator build"
+          if flutter build ios --simulator --release --verbose; then
+            echo "✅ Flutter iOS simulator build successful!"
           else
-            echo "❌ Standard build failed, trying alternative..."
+            echo "❌ Simulator build failed, trying alternative..."
 
-            echo "Attempt 2: Config-only build then manual"
+            echo "Attempt 2: Config-only build then manual simulator build"
             flutter build ios --config-only
 
-            # Try to build with xcodebuild directly
+            # Try to build with xcodebuild for SIMULATOR only
             if [ -d "ios/Runner.xcodeproj" ]; then
-              echo "📦 Found Xcode project, trying xcodebuild..."
+              echo "📦 Found Xcode project, trying xcodebuild for simulator..."
 
               cd ios
 
-              # Clean and build with xcodebuild
-              xcodebuild clean -project Runner.xcodeproj -scheme Runner -configuration Release || true
+              # Clean
+              xcodebuild clean -project Runner.xcodeproj -scheme Runner || true
 
-              # Try build without code signing
+              # Build for SIMULATOR only (no certificates needed)
               xcodebuild build \
                 -project Runner.xcodeproj \
                 -scheme Runner \
@@ -86,15 +86,12 @@ jobs:
                 DEVELOPMENT_TEAM="" \
                 -verbose
 
-              # Check if build succeeded
+              # Check if simulator build succeeded
               if [ -d "build/Release-iphonesimulator/Runner.app" ]; then
                 echo "✅ Xcode simulator build successful!"
                 cp -r build/Release-iphonesimulator/Runner.app ../build/ios/iphonesimulator/
-              elif [ -d "build/Release-iphoneos/Runner.app" ]; then
-                echo "✅ Xcode device build successful!"
-                cp -r build/Release-iphoneos/Runner.app ../build/ios/iphoneos/
               else
-                echo "❌ Xcode build also failed"
+                echo "❌ Xcode simulator build failed"
                 find build -name "*.app" -type d 2>/dev/null || echo "No app bundles found"
                 exit 1
               fi
