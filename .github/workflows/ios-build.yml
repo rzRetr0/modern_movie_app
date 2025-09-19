@@ -39,24 +39,34 @@ jobs:
       - name: Flutter clean
         run: flutter clean
 
-      # 6️⃣ Build unsigned iOS app
-      - name: Build Flutter iOS (unsigned)
+      # 6️⃣ Build unsigned iOS app (direct Xcode build)
+      - name: Build Flutter iOS (direct Xcode)
         run: |
-          echo "🔨 Building unsigned Flutter iOS app..."
+          echo "🔨 Building Flutter iOS app (direct Xcode build)..."
 
-          # Create backup of Podfile if it exists
+          # Generate Flutter iOS project without building
+          flutter build ios --release --no-codesign --config-only
+
+          # Remove Podfile to prevent CocoaPods
           if [ -f "ios/Podfile" ]; then
-            cp ios/Podfile ios/Podfile.backup
-            echo "📦 Podfile backed up"
+            rm ios/Podfile
+            echo "🗑️ Podfile removed"
           fi
 
-          # Build unsigned iOS app
-          flutter build ios --release --no-codesign
+          # Build directly with xcodebuild (bypasses CocoaPods)
+          cd ios
+          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release -destination generic/platform=iOS -archivePath build/Runner.xcarchive archive CODE_SIGNING_ALLOWED=NO
 
-          # Restore Podfile
-          if [ -f "ios/Podfile.backup" ]; then
-            mv ios/Podfile.backup ios/Podfile
-            echo "📦 Podfile restored"
+          # Extract .app from archive
+          xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportPath build/Runner -exportOptionsPlist ../export-options.plist
+
+          # Check if build succeeded
+          if [ -d "build/Runner/Runner.app" ]; then
+            echo "✅ Build successful - Runner.app found"
+            cp -r build/Runner/Runner.app ../build/ios/iphoneos/
+          else
+            echo "❌ Build failed - Runner.app not found"
+            exit 1
           fi
 
       # 7️⃣ Create unsigned IPA
