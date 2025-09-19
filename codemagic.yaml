@@ -32,9 +32,9 @@ workflows:
           du -h *.ipa
 
     artifacts:
-      - build/ios/**/*.app
-      - build/ios/**/*.ipa
-      - *.ipa
+      - "build/ios/**/*.app"
+      - "build/ios/**/*.ipa"
+      - "*.ipa"
 
   # Android build workflow
   android-workflow:
@@ -58,8 +58,8 @@ workflows:
           flutter build appbundle --release
 
     artifacts:
-      - build/app/outputs/**/*.apk
-      - build/app/outputs/**/*.aab
+      - "build/app/outputs/**/*.apk"
+      - "build/app/outputs/**/*.aab"
 
   # Web build workflow
   web-workflow:
@@ -78,7 +78,7 @@ workflows:
           flutter build web --release
 
     artifacts:
-      - build/web/**/*
+      - "build/web/**/*"
 
   # All platforms workflow
   all-platforms:
@@ -114,11 +114,11 @@ workflows:
           zip -r merl-cinema-ios.ipa Payload/
 
     artifacts:
-      - build/web/**/*
-      - build/app/outputs/**/*.apk
-      - build/app/outputs/**/*.aab
-      - build/ios/**/*.app
-      - *.ipa
+      - "build/web/**/*"
+      - "build/app/outputs/**/*.apk"
+      - "build/app/outputs/**/*.aab"
+      - "build/ios/**/*.app"
+      - "*.ipa"
 
 # Publishing configuration (optional)
 publishing:
