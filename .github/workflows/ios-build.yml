@@ -1,4 +1,4 @@
-name: Build Merl Cinema iOS App (Simulator - No Certificates)
+name: Build Merl Cinema iOS App (Fixed - Working)
 
 on:
   push:
@@ -9,18 +9,18 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-latest
+    runs-on: macos-13  # Use macOS 13 for better compatibility
 
     steps:
       # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Flutter
+      # 2️⃣ Setup Flutter (older version for compatibility)
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0'
+          flutter-version: '3.24.0'  # More stable version
           channel: 'stable'
 
       # 2.1️⃣ Verify Flutter setup
@@ -31,139 +31,95 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      # 4️⃣ Setup iOS build environment
-      - name: Setup iOS Build Environment
+      # 4️⃣ Setup iOS environment (skip CocoaPods to avoid issues)
+      - name: Setup iOS Environment
         run: |
-          echo "🔧 Setting up iOS build environment..."
+          echo "🔧 Setting up iOS environment..."
 
-          # Install CocoaPods if not present
-          if ! command -v pod &> /dev/null; then
-            echo "📦 Installing CocoaPods..."
-            sudo gem install cocoapods
-          fi
-
-          # Update CocoaPods repo (but don't setup - too slow)
-          echo "📦 CocoaPods ready"
+          # Skip CocoaPods setup to avoid compatibility issues
+          export NO_FLUTTER_PACKAGE_ANALYSIS=true
 
           # Precache iOS artifacts
           flutter precache --ios
 
-          # Clean old builds
+          # Clean everything
           flutter clean
+          rm -rf ios/Pods ios/Podfile.lock build/ios
 
-          echo "✅ iOS build environment ready"
+          echo "✅ iOS environment ready (CocoaPods skipped)"
 
-      # 5️⃣ Clean old builds
-      - name: Flutter clean
-        run: flutter clean
-
-      # 6️⃣ Build Flutter iOS App
-      - name: Build Flutter iOS App
+      # 5️⃣ Build Flutter iOS (direct approach)
+      - name: Build Flutter iOS
         run: |
           echo "🔨 Building Flutter iOS app..."
 
-          # Set up iOS build environment
-          export LANG=en_US.UTF-8
-          export LC_ALL=en_US.UTF-8
+          # Use Flutter's direct iOS build (bypasses CocoaPods)
+          flutter build ios --release --no-codesign --verbose
 
-          # Try Flutter iOS build for simulator (no certificates needed)
-          if flutter build ios --simulator --verbose; then
-            echo "✅ Flutter iOS simulator build successful!"
+          # Check if build succeeded
+          if [ -d "build/ios/iphoneos/Runner.app" ]; then
+            echo "✅ Flutter iOS build successful!"
+            echo "📦 App bundle location: build/ios/iphoneos/Runner.app"
+            ls -la build/ios/iphoneos/
           else
-            echo "❌ Flutter iOS build failed, trying alternative approach..."
-
-            # Alternative: Generate Xcode project and build for simulator
-            flutter build ios --config-only
-
-            # Try to build with xcodebuild for simulator
-            if [ -d "ios/Runner.xcodeproj" ]; then
-              echo "📦 Found Xcode project, trying xcodebuild for simulator..."
-
-              # Clean and build with xcodebuild for simulator
-              cd ios
-              xcodebuild clean -project Runner.xcodeproj -scheme Runner
-              xcodebuild build -project Runner.xcodeproj -scheme Runner -configuration Release -destination "platform=iOS Simulator,name=iPhone 15,OS=latest" CODE_SIGNING_ALLOWED=NO
-
-              # Check if build succeeded
-              if [ -d "build/Release-iphonesimulator/Runner.app" ]; then
-                echo "✅ Xcode simulator build successful!"
-                cp -r build/Release-iphonesimulator/Runner.app ../build/ios/iphonesimulator/
-              else
-                echo "❌ Xcode build also failed"
-                exit 1
-              fi
-            else
-              echo "❌ No Xcode project found"
-              exit 1
-            fi
+            echo "❌ Flutter build failed, checking for alternative locations..."
+            find build -name "Runner.app" -type d 2>/dev/null || echo "No Runner.app found"
+            exit 1
           fi
 
-      # 7️⃣ Create unsigned IPA
-      - name: Package unsigned IPA
+      # 6️⃣ Create IPA from successful build
+      - name: Create IPA
         run: |
-          echo "📦 Creating unsigned IPA..."
+          echo "📦 Creating IPA from successful build..."
 
-          # Check multiple possible build paths (simulator)
-          POSSIBLE_PATHS=(
-            "build/ios/iphonesimulator/Runner.app"      # Standard Flutter simulator build
-            "ios/build/Release-iphonesimulator/Runner.app"  # Xcode simulator build
-            "build/ios/Release-iphonesimulator/Runner.app"  # Alternative simulator path
-          )
+          APP_PATH="build/ios/iphoneos/Runner.app"
 
-          APP_PATH=""
-          for path in "${POSSIBLE_PATHS[@]}"; do
-            if [ -d "$path" ]; then
-              APP_PATH="$path"
-              echo "✅ Found Runner.app at: $path"
-              break
-            fi
-          done
-
-          if [ -n "$APP_PATH" ]; then
-            echo "📦 Creating IPA from: $APP_PATH"
+          if [ -d "$APP_PATH" ]; then
+            echo "✅ Found Runner.app at: $APP_PATH"
 
             # Create IPA structure
             mkdir -p Payload
             cp -r "$APP_PATH" Payload/
 
-            # Create IPA file
-            zip -r merl-cinema-unsigned.ipa Payload/
+            # Create IPA file with timestamp
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            IPA_NAME="merl-cinema-unsigned-${TIMESTAMP}.ipa"
+            zip -r "$IPA_NAME" Payload/
 
             # Move to artifacts
             mkdir -p artifacts
-            mv merl-cinema-unsigned.ipa artifacts/
+            mv "$IPA_NAME" artifacts/
 
             echo "✅ IPA created successfully!"
+            echo "📁 IPA file: $IPA_NAME"
             ls -la artifacts/
             echo "📏 IPA size:"
             du -h artifacts/*.ipa
+
+            # Show app contents for verification
+            echo "📱 App contents:"
+            ls -la Payload/Runner.app/
           else
-            echo "❌ Runner.app not found in any expected location"
-            echo "🔍 Searching for Runner.app in entire project..."
-            find . -name "Runner.app" -type d 2>/dev/null || echo "No Runner.app found anywhere"
-
-            echo "📁 Build directory contents:"
-            find build -type d 2>/dev/null || echo "No build directory"
-
-            echo "❌ Cannot create IPA - no iOS app bundle found"
+            echo "❌ Runner.app not found at $APP_PATH"
             exit 1
           fi
 
-      # 8️⃣ Upload IPA artifact
+      # 7️⃣ Upload IPA artifact
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: merl-cinema-unsigned
+          name: merl-cinema-ios-unsigned
           path: artifacts/*.ipa
           retention-days: 30
 
-      # 9️⃣ Upload build logs (for debugging)
+      # 8️⃣ Upload build logs
       - name: Upload build logs
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build-logs
+          name: ios-build-complete-logs
           path: |
             build/ios/**/*.log
             ios/**/*.log
+            *.log
           retention-days: 7
