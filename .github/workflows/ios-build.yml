@@ -61,11 +61,25 @@ jobs:
       - name: Flutter clean
         run: flutter clean
 
-      # 7️⃣ Build iOS app
-      - name: Build Flutter iOS
+      # 7️⃣ Build iOS app (force bypass CocoaPods)
+      - name: Build Flutter iOS (force bypass)
         run: |
-          echo "🔨 Building Flutter iOS app..."
+          echo "🔨 Building Flutter iOS app (force bypass CocoaPods)..."
+
+          # Force disable CocoaPods by removing Podfile completely
+          if [ -f "ios/Podfile" ]; then
+            rm ios/Podfile
+            echo "🗑️  Podfile removed to force CocoaPods bypass"
+          fi
+
+          # Build with Flutter (should skip CocoaPods entirely)
           flutter build ios --release --no-codesign --verbose
+
+          # Restore Podfile for future use
+          if [ -f "ios/Podfile.backup" ]; then
+            cp ios/Podfile.backup ios/Podfile
+            echo "📦 Podfile restored from backup"
+          fi
 
       # 7️⃣ Create unsigned IPA (check multiple possible paths)
       - name: Package unsigned IPA
