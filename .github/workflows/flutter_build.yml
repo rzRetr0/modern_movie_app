@@ -13,15 +13,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.0'
 
-      - name: Install Flutter dependencies
+      - name: Cache Flutter Pub
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.pub-cache
+          key: flutter-pub-${{ hashFiles('**/pubspec.yaml') }}
+
+      - name: Get Dependencies
         run: flutter pub get
 
       - name: Build APK
@@ -30,7 +36,7 @@ jobs:
       - name: Build AppBundle
         run: flutter build appbundle --release
 
-      - name: Upload Android artifacts
+      - name: Upload Android Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-builds
@@ -43,39 +49,43 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Flutter
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.0'
 
-      - name: Install Flutter dependencies and generate iOS files
-        run: |
-          flutter pub get
-          flutter precache
-          flutter build ios --no-codesign
-        shell: bash
+      - name: Cache Flutter Pub
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.pub-cache
+          key: flutter-pub-${{ hashFiles('**/pubspec.yaml') }}
 
-      - name: Install CocoaPods
-        run: sudo gem install cocoapods
-        shell: bash
+      - name: Get Flutter Dependencies
+        run: flutter pub get
+
+      - name: Precache iOS Artifacts
+        run: flutter precache
+
+      - name: Build iOS project (generate files)
+        run: flutter build ios --no-codesign
+
+      - name: Install CocoaPods 1.17.0+
+        run: sudo gem install cocoapods -v 1.17.0
 
       - name: Install iOS Pods
         run: |
           cd ios
           rm -rf Pods Podfile.lock
           rm -rf ~/Library/Developer/Xcode/DerivedData/*
-          pod repo update
           pod install --repo-update
-        shell: bash
 
       - name: Build IPA
         run: flutter build ipa --no-codesign
-        shell: bash
 
-      - name: Upload iOS IPA artifact
+      - name: Upload iOS IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
