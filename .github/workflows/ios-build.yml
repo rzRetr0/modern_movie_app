@@ -83,11 +83,11 @@ jobs:
             cp -r "$APP_PATH" Payload/
 
             # Create IPA file
-            zip -r ios-app-unsigned.ipa Payload/
+            zip -r merl-cinema-unsigned.ipa Payload/
 
             # Move to artifacts
             mkdir -p artifacts
-            mv ios-app-unsigned.ipa artifacts/
+            mv merl-cinema-unsigned.ipa artifacts/
 
             echo "✅ IPA created successfully!"
             ls -la artifacts/
@@ -106,7 +106,7 @@ jobs:
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: ios-app-unsigned
+          name: merl-cinema-unsigned
           path: artifacts/*.ipa
           retention-days: 30
 
