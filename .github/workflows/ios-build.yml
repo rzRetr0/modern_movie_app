@@ -1,4 +1,4 @@
-name: Build Merl Cinema iOS App (Unsigned IPA)
+name: Build Merl Cinema iOS App (Simulator - No Certificates)
 
 on:
   push:
@@ -66,28 +66,28 @@ jobs:
           export LANG=en_US.UTF-8
           export LC_ALL=en_US.UTF-8
 
-          # Try Flutter iOS build with error handling
-          if flutter build ios --no-codesign --verbose; then
-            echo "✅ Flutter iOS build successful!"
+          # Try Flutter iOS build for simulator (no certificates needed)
+          if flutter build ios --simulator --verbose; then
+            echo "✅ Flutter iOS simulator build successful!"
           else
             echo "❌ Flutter iOS build failed, trying alternative approach..."
 
-            # Alternative: Generate Xcode project and build manually
+            # Alternative: Generate Xcode project and build for simulator
             flutter build ios --config-only
 
-            # Try to build with xcodebuild if Flutter build fails
+            # Try to build with xcodebuild for simulator
             if [ -d "ios/Runner.xcodeproj" ]; then
-              echo "📦 Found Xcode project, trying xcodebuild..."
+              echo "📦 Found Xcode project, trying xcodebuild for simulator..."
 
-              # Clean and build with xcodebuild
+              # Clean and build with xcodebuild for simulator
               cd ios
               xcodebuild clean -project Runner.xcodeproj -scheme Runner
-              xcodebuild build -project Runner.xcodeproj -scheme Runner -configuration Release -destination generic/platform=iOS CODE_SIGNING_ALLOWED=NO
+              xcodebuild build -project Runner.xcodeproj -scheme Runner -configuration Release -destination "platform=iOS Simulator,name=iPhone 15,OS=latest" CODE_SIGNING_ALLOWED=NO
 
               # Check if build succeeded
-              if [ -d "build/Release-iphoneos/Runner.app" ]; then
-                echo "✅ Xcode build successful!"
-                cp -r build/Release-iphoneos/Runner.app ../build/ios/iphoneos/
+              if [ -d "build/Release-iphonesimulator/Runner.app" ]; then
+                echo "✅ Xcode simulator build successful!"
+                cp -r build/Release-iphonesimulator/Runner.app ../build/ios/iphonesimulator/
               else
                 echo "❌ Xcode build also failed"
                 exit 1
@@ -103,11 +103,11 @@ jobs:
         run: |
           echo "📦 Creating unsigned IPA..."
 
-          # Check multiple possible build paths
+          # Check multiple possible build paths (simulator)
           POSSIBLE_PATHS=(
-            "build/ios/iphoneos/Runner.app"      # Standard Flutter build
-            "ios/build/Release-iphoneos/Runner.app"  # Xcode build
-            "build/ios/Release-iphoneos/Runner.app"  # Alternative path
+            "build/ios/iphonesimulator/Runner.app"      # Standard Flutter simulator build
+            "ios/build/Release-iphonesimulator/Runner.app"  # Xcode simulator build
+            "build/ios/Release-iphonesimulator/Runner.app"  # Alternative simulator path
           )
 
           APP_PATH=""
