@@ -20,7 +20,7 @@ workflows:
           rm -rf ios/Pods ios/Podfile.lock build/ios
 
           echo "🔄 Regenerating iOS project..."
-          flutter create --platforms=ios .
+          flutter create --platforms=ios --org com.movieapp .
 
       - name: Build iOS
         script: |
@@ -121,7 +121,7 @@ workflows:
           rm -rf ios/Pods ios/Podfile.lock build/ios
 
           echo "🔄 Regenerating iOS project..."
-          flutter create --platforms=ios .
+          flutter create --platforms=ios --org com.movieapp .
 
       - name: Build iOS
         script: |

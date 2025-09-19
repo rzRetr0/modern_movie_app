@@ -24,7 +24,7 @@ rm -rf ios/Pods ios/Podfile.lock build/ios
 
 # Regenerate iOS project
 echo "🔄 Regenerating iOS project..."
-flutter create --platforms=ios .
+flutter create --platforms=ios --org com.movieapp .
 
 # Build iOS app
 echo "🔨 Building iOS app..."
