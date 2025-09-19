@@ -55,45 +55,69 @@ jobs:
           export LC_ALL=en_US.UTF-8
           export FLUTTER_ROOT="$(flutter --version | grep 'Flutter' | cut -d' ' -f2 | tr -d ',')"
 
-          # Try Flutter iOS build for SIMULATOR (no certificates needed)
-          echo "Attempt 1: Flutter simulator build"
+          # Force SIMULATOR build by setting environment variables
+          echo "Attempt 1: Forced simulator build"
+          export FLUTTER_BUILD_MODE=release
+          export FLUTTER_TARGET_PLATFORM=ios
+
+          # Build for simulator explicitly
           if flutter build ios --simulator --release --verbose; then
             echo "✅ Flutter iOS simulator build successful!"
           else
-            echo "❌ Simulator build failed, trying alternative..."
+            echo "❌ Flutter simulator build failed, trying direct xcodebuild..."
 
-            echo "Attempt 2: Config-only build then manual simulator build"
-            flutter build ios --config-only
+            echo "Attempt 2: Direct xcodebuild for simulator"
 
-            # Try to build with xcodebuild for SIMULATOR only
+            # Generate Xcode project for simulator
+            flutter build ios --config-only --simulator
+
+            # Force simulator build by modifying project settings
             if [ -d "ios/Runner.xcodeproj" ]; then
-              echo "📦 Found Xcode project, trying xcodebuild for simulator..."
+              echo "📦 Found Xcode project, configuring for simulator..."
 
               cd ios
 
-              # Clean
-              xcodebuild clean -project Runner.xcodeproj -scheme Runner || true
-
-              # Build for SIMULATOR only (no certificates needed)
-              xcodebuild build \
+              # Create a custom scheme for simulator build
+              xcodebuild \
                 -project Runner.xcodeproj \
                 -scheme Runner \
                 -configuration Release \
-                -destination "platform=iOS Simulator,name=iPhone 15,OS=latest" \
+                -destination "platform=iOS Simulator,name=iPhone 15 Pro,OS=latest" \
+                -sdk iphonesimulator \
                 CODE_SIGNING_ALLOWED=NO \
                 CODE_SIGN_IDENTITY="" \
-                PROVISIONING_PROFILE="" \
+                PROVISIONING_PROFILE_SPECIFIER="" \
                 DEVELOPMENT_TEAM="" \
-                -verbose
+                ONLY_ACTIVE_ARCH=YES \
+                -verbose \
+                build
 
-              # Check if simulator build succeeded
+              # Check for simulator build output
               if [ -d "build/Release-iphonesimulator/Runner.app" ]; then
                 echo "✅ Xcode simulator build successful!"
                 cp -r build/Release-iphonesimulator/Runner.app ../build/ios/iphonesimulator/
               else
                 echo "❌ Xcode simulator build failed"
-                find build -name "*.app" -type d 2>/dev/null || echo "No app bundles found"
-                exit 1
+
+                # Try alternative: Build without specifying destination first
+                echo "Trying alternative: Build without destination..."
+                xcodebuild \
+                  -project Runner.xcodeproj \
+                  -scheme Runner \
+                  -configuration Release \
+                  -sdk iphonesimulator \
+                  CODE_SIGNING_ALLOWED=NO \
+                  ONLY_ACTIVE_ARCH=YES \
+                  build
+
+                if [ -d "build/Release-iphonesimulator/Runner.app" ]; then
+                  echo "✅ Alternative Xcode build successful!"
+                  cp -r build/Release-iphonesimulator/Runner.app ../build/ios/iphonesimulator/
+                else
+                  echo "❌ All Xcode builds failed"
+                  find build -name "*.app" -type d 2>/dev/null || echo "No app bundles found"
+                  exit 1
+                fi
               fi
             else
               echo "❌ No Xcode project found"
