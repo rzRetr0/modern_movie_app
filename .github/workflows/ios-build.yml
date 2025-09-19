@@ -1,54 +1,50 @@
-name: Merl Cinema - Codemagic Redirect
+name: Merl Cinema - Build iOS IPA (Unsigned)
 
 on:
   push:
     branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  redirect-to-codemagic:
-    runs-on: ubuntu-latest
+  build-ios:
+    runs-on: macos-latest
 
     steps:
-      - name: Codemagic Build Instructions
+      # 1️⃣ Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: stable
+
+      # 3️⃣ Install Flutter dependencies
+      - name: Flutter pub get
+        run: flutter pub get
+
+      # 4️⃣ Build iOS App (unsigned)
+      - name: Build iOS App
         run: |
-          echo "🚀 Merl Cinema CI/CD has moved to Codemagic!"
-          echo ""
-          echo "✅ PRIMARY CI/CD: Codemagic"
-          echo "   - Reliable iOS builds (no CocoaPods issues)"
-          echo "   - Professional macOS environment"
-          echo "   - All platforms supported"
-          echo ""
-          echo "📋 Setup Instructions:"
-          echo "   1. Go to https://codemagic.io"
-          echo "   2. Sign up/Sign in"
-          echo "   3. Add your GitHub repository"
-          echo "   4. Select Flutter project"
-          echo "   5. Codemagic will auto-detect codemagic.yaml"
-          echo ""
-          echo "🎯 Available Workflows:"
-          echo "   - ios-workflow: iOS builds only"
-          echo "   - android-workflow: Android builds only"
-          echo "   - web-workflow: Web builds only"
-          echo "   - all-platforms: All platforms together"
-          echo ""
-          echo "📦 Expected Artifacts:"
-          echo "   - iOS: merl-cinema-ios.ipa (80-150MB)"
-          echo "   - Android: app-release.apk (50-100MB)"
-          echo "   - Web: build/web/ (8-15MB)"
-          echo ""
-          echo "🎉 Why Codemagic Works:"
-          echo "   - Native macOS environment (M2 Mac mini)"
-          echo "   - Latest Xcode always available"
-          echo "   - CocoaPods properly configured"
-          echo "   - No compatibility issues"
-          echo ""
-          echo "🔗 Quick Start:"
-          echo "   https://codemagic.io/apps"
-          echo ""
-          echo "📖 Full Documentation:"
-          echo "   See CODEMAGIC_README.md in repository"
-          echo ""
-          echo "🎬 Your movie app will build successfully on Codemagic!"
+          flutter clean
+          flutter build ios --release --no-codesign
+
+      # 5️⃣ Package unsigned IPA manually
+      - name: Package unsigned IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r Runner-unsigned.ipa Payload
+          mv Runner-unsigned.ipa ../../
+          cd ../../..
+
+      # 6️⃣ Upload IPA artifact
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-ipa
+          path: build/ios/Runner-unsigned.ipa
+          retention-days: 7
