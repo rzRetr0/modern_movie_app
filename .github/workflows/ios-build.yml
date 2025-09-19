@@ -35,29 +35,35 @@ jobs:
       - name: Flutter precache iOS
         run: flutter precache --ios
 
-      # 5️⃣ Clean old builds
+      # 5️⃣ Setup CocoaPods Environment
+      - name: Setup CocoaPods Environment
+        run: |
+          echo "🔧 Setting up CocoaPods environment..."
+
+          # Update RubyGems
+          gem update --system
+
+          # Install/update CocoaPods
+          gem install cocoapods
+
+          # Update CocoaPods repo (if it exists)
+          if [ -d ~/.cocoapods/repos/master ]; then
+            pod repo update
+          else
+            pod setup
+          fi
+
+          echo "✅ CocoaPods environment ready"
+
+      # 6️⃣ Clean old builds
       - name: Flutter clean
         run: flutter clean
 
-      # 6️⃣ Build iOS app (completely bypass CocoaPods)
-      - name: Build Flutter iOS (bypass CocoaPods)
+      # 7️⃣ Build iOS app
+      - name: Build Flutter iOS
         run: |
-          echo "🔨 Building Flutter iOS app (completely bypassing CocoaPods)..."
-
-          # Temporarily disable CocoaPods by renaming Podfile
-          if [ -f "ios/Podfile" ]; then
-            mv ios/Podfile ios/Podfile.disabled
-            echo "📦 CocoaPods disabled by renaming Podfile"
-          fi
-
-          # Build with Flutter (no CocoaPods interference)
-          flutter build ios --release --no-codesign
-
-          # Restore Podfile if it was disabled
-          if [ -f "ios/Podfile.disabled" ]; then
-            mv ios/Podfile.disabled ios/Podfile
-            echo "📦 Podfile restored"
-          fi
+          echo "🔨 Building Flutter iOS app..."
+          flutter build ios --release --no-codesign --verbose
 
       # 7️⃣ Create unsigned IPA (check multiple possible paths)
       - name: Package unsigned IPA
