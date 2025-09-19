@@ -1,4 +1,4 @@
-name: Build Merl Cinema iOS App (Unsigned)
+name: Build Merl Cinema iOS App (No CocoaPods)
 
 on:
   push:
@@ -39,11 +39,12 @@ jobs:
       - name: Flutter clean
         run: flutter clean
 
-      # 6️⃣ Build iOS unsigned app (avoids CocoaPods issues)
-      - name: Build Flutter iOS (unsigned)
+      # 6️⃣ Build iOS app (no CocoaPods - uses Flutter's built-in system)
+      - name: Build Flutter iOS (no CocoaPods)
         run: |
-          echo "🔨 Starting Flutter iOS build..."
-          flutter build ios --release --no-codesign --verbose
+          echo "🔨 Building Flutter iOS app (no CocoaPods)..."
+          # Use --config-only to skip CocoaPods and use Flutter's built-in iOS build system
+          flutter build ios --release --no-codesign --config-only
 
       # 7️⃣ Create unsigned IPA (check multiple possible paths)
       - name: Package unsigned IPA
