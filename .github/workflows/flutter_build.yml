@@ -13,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0' # match your Flutter version
+          flutter-version: '3.29.0' # use your Flutter version
 
       - name: Install dependencies
         run: flutter pub get
@@ -38,25 +38,18 @@ jobs:
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
 
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-ipa
-          path: build/ios/ipa/*.ipa
-
-
   build-ios:
     name: Build iOS IPA
     runs-on: macos-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.5' # match your Flutter version
+          flutter-version: '3.13.5' # your Flutter version
 
       - name: Install dependencies
         run: flutter pub get
@@ -67,11 +60,13 @@ jobs:
       - name: Prepare iOS
         run: |
           cd ios
-          rm -rf Pods Podfile.lock Runner.xcworkspace
+          rm -rf Pods Podfile.lock
+          rm -rf ~/Library/Developer/Xcode/DerivedData/*
+          pod repo update
           pod install --repo-update
         shell: bash
 
-      - name: Build iOS IPA (no codesign)
+      - name: Build iOS IPA
         run: |
           flutter build ipa \
             --export-options-plist=ios/ExportOptions.plist \
@@ -79,7 +74,7 @@ jobs:
         shell: bash
 
       - name: Upload IPA artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
           path: build/ios/ipa/*.ipa
