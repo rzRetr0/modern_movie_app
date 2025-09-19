@@ -13,8 +13,18 @@ workflows:
         script: |
           flutter pub get
 
+      - name: Clean and Setup iOS
+        script: |
+          echo "🧹 Cleaning iOS project..."
+          flutter clean
+          rm -rf ios/Pods ios/Podfile.lock build/ios
+
+          echo "🔄 Regenerating iOS project..."
+          flutter create --platforms=ios .
+
       - name: Build iOS
         script: |
+          echo "🔨 Building iOS with fresh project..."
           flutter build ios --release --no-codesign
 
       - name: Create IPA
@@ -104,8 +114,18 @@ workflows:
           flutter build apk --release
           flutter build appbundle --release
 
+      - name: Clean and Setup iOS
+        script: |
+          echo "🧹 Cleaning iOS project..."
+          flutter clean
+          rm -rf ios/Pods ios/Podfile.lock build/ios
+
+          echo "🔄 Regenerating iOS project..."
+          flutter create --platforms=ios .
+
       - name: Build iOS
         script: |
+          echo "🔨 Building iOS with fresh project..."
           flutter build ios --release --no-codesign
 
           # Create IPA
