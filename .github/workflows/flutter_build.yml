@@ -14,38 +14,31 @@ jobs:
 
     steps:
       # 1. Checkout repository
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       # 2. Setup Flutter
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.0'
 
-      # 3. Flutter precache (optional but can speed up build)
-      - name: Flutter precache
-        run: flutter precache
+      # 3. Install Flutter dependencies (generates Generated.xcconfig)
+      - run: flutter pub get
         shell: bash
 
-      # 4. Install Flutter dependencies
-      - name: Install Flutter dependencies
-        run: flutter pub get
+      # 4. Flutter precache (optional)
+      - run: flutter precache
         shell: bash
 
-      # 5. Clean Flutter project (optional, ensures a fresh build)
-      - name: Clean Flutter project
-        run: flutter clean
+      # 5. Clean Flutter project
+      - run: flutter clean
         shell: bash
 
       # 6. Install CocoaPods
-      - name: Install CocoaPods
-        run: sudo gem install cocoapods
+      - run: sudo gem install cocoapods
         shell: bash
 
-      # 7. Prepare iOS (remove old Pods and install new)
-      - name: Prepare iOS
-        run: |
+      # 7. Prepare iOS (Pods)
+      - run: |
           cd ios
           rm -rf Pods Podfile.lock
           rm -rf ~/Library/Developer/Xcode/DerivedData/*
@@ -53,14 +46,12 @@ jobs:
           pod install --repo-update
         shell: bash
 
-      # 8. Build IPA (no codesign)
-      - name: Build IPA
-        run: flutter build ipa --export-options-plist=ios/ExportOptions.plist --no-codesign
+      # 8. Build IPA
+      - run: flutter build ipa --export-options-plist=ios/ExportOptions.plist --no-codesign
         shell: bash
 
-      # 9. Upload IPA artifact
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
+      # 9. Upload IPA
+      - uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
           path: build/ios/ipa/*.ipa
