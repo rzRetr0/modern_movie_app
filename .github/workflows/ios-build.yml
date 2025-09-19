@@ -35,25 +35,27 @@ jobs:
       - name: Flutter precache iOS
         run: flutter precache --ios
 
-      # 5️⃣ Setup CocoaPods Environment
-      - name: Setup CocoaPods Environment
+      # 5️⃣ Fix CocoaPods/xcodeproj compatibility
+      - name: Fix CocoaPods Compatibility
         run: |
-          echo "🔧 Setting up CocoaPods environment..."
+          echo "🔧 Fixing CocoaPods/xcodeproj compatibility..."
 
           # Update RubyGems
           gem update --system
 
-          # Install/update CocoaPods
+          # Update xcodeproj gem to compatible version
+          gem install xcodeproj --version 1.27.1
+
+          # Update CocoaPods
           gem install cocoapods
 
-          # Update CocoaPods repo (if it exists)
-          if [ -d ~/.cocoapods/repos/master ]; then
-            pod repo update
-          else
-            pod setup
-          fi
+          # Clean CocoaPods cache
+          rm -rf ~/.cocoapods/repos/master
 
-          echo "✅ CocoaPods environment ready"
+          # Re-setup CocoaPods repo
+          pod setup
+
+          echo "✅ CocoaPods compatibility fixed"
 
       # 6️⃣ Clean old builds
       - name: Flutter clean
