@@ -1,4 +1,4 @@
-name: Build Flutter iOS App (Unsigned)
+name: Build Merl Cinema iOS App (Unsigned)
 
 on:
   push:

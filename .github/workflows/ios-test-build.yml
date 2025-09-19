@@ -1,4 +1,4 @@
-name: Test iOS Build (No IPA)
+name: Test Merl Cinema iOS Build (No IPA)
 
 on:
   workflow_dispatch:
