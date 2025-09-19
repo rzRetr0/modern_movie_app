@@ -1,0 +1,61 @@
+name: Test iOS Build (No IPA)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Flutter precache iOS
+        run: flutter precache --ios
+
+      - name: Flutter clean
+        run: flutter clean
+
+      - name: Test Flutter iOS build
+        run: |
+          echo "🧪 Testing Flutter iOS build..."
+          flutter build ios --debug --no-codesign
+          if [ $? -eq 0 ]; then
+            echo "✅ Debug build successful"
+            find build -name "Runner.app" -type d
+          else
+            echo "❌ Debug build failed"
+            exit 1
+          fi
+
+      - name: Test Flutter iOS release build
+        run: |
+          echo "🧪 Testing Flutter iOS release build..."
+          flutter build ios --release --no-codesign
+          if [ $? -eq 0 ]; then
+            echo "✅ Release build successful"
+            find build -name "Runner.app" -type d
+          else
+            echo "❌ Release build failed"
+            exit 1
+          fi
+
+      - name: Show build outputs
+        run: |
+          echo "📁 Build directory contents:"
+          find build -type d -name "*.app" 2>/dev/null || echo "No .app directories found"
+          echo "📊 Build directory size:"
+          du -sh build/ 2>/dev/null || echo "Build directory not found"
