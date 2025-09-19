@@ -49,13 +49,14 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0' # your Flutter version
+          flutter-version: '3.13.6' # higher stable version
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Clean Flutter project
-        run: flutter clean
+      - name: Generate iOS build settings
+        run: flutter precache
+        shell: bash
 
       - name: Prepare iOS
         run: |
