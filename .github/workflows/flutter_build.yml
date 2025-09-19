@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch: # manual trigger
+  workflow_dispatch:
 
 jobs:
   build-android:
@@ -13,25 +13,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0' # use your Flutter version
+          flutter-version: '3.29.0'
 
-      - name: Install dependencies
-        run: flutter pub get
+      - run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --release
+      - run: flutter build apk --release
 
-      - name: Build AppBundle
-        run: flutter build appbundle --release
+      - run: flutter build appbundle --release
 
-      - name: Upload Android artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: android-builds
           path: |
@@ -43,51 +37,27 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0'  # stable Flutter version
+          flutter-version: '3.29.0'
 
-      - name: Install Flutter dependencies
-        run: flutter pub get
+      - run: flutter pub get
 
-      - name: Generate iOS build files
-        run: flutter precache
-        shell: bash
+      - run: flutter clean
 
-      - name: Clean Flutter project
-        run: flutter clean
-        shell: bash
-
-      - name: Install CocoaPods
-        run: sudo gem install cocoapods -v 1.17.0
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Prepare iOS
+      - name: Install iOS dependencies
         run: |
-          flutter precache
           cd ios
           rm -rf Pods Podfile.lock
           rm -rf ~/Library/Developer/Xcode/DerivedData/*
-          pod repo update
           pod install --repo-update
         shell: bash
 
-      - name: Build IPA
-        run: |
-          flutter build ipa \
-            --export-options-plist=ios/ExportOptions.plist \
-            --no-codesign
-        shell: bash
+      - run: flutter build ipa --no-codesign
 
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
           path: build/ios/ipa/*.ipa
-
