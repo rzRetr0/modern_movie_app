@@ -8,63 +8,42 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-android:
-    name: Build Android APK & AAB
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.29.0'
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Build AppBundle
-        run: flutter build appbundle --release
-
-      - name: Upload Android artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-builds
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/bundle/release/app-release.aab
-
   build-ios:
     name: Build iOS IPA
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # 1. Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      # 2. Setup Flutter
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.0'
 
-      - name: Install Flutter dependencies
-        run: flutter pub get
-        shell: bash
-
+      # 3. Flutter precache (optional but can speed up build)
       - name: Flutter precache
         run: flutter precache
         shell: bash
 
+      # 4. Install Flutter dependencies
+      - name: Install Flutter dependencies
+        run: flutter pub get
+        shell: bash
+
+      # 5. Clean Flutter project (optional, ensures a fresh build)
       - name: Clean Flutter project
         run: flutter clean
         shell: bash
 
+      # 6. Install CocoaPods
       - name: Install CocoaPods
         run: sudo gem install cocoapods
         shell: bash
 
+      # 7. Prepare iOS (remove old Pods and install new)
       - name: Prepare iOS
         run: |
           cd ios
@@ -74,10 +53,12 @@ jobs:
           pod install --repo-update
         shell: bash
 
+      # 8. Build IPA (no codesign)
       - name: Build IPA
         run: flutter build ipa --export-options-plist=ios/ExportOptions.plist --no-codesign
         shell: bash
 
+      # 9. Upload IPA artifact
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
