@@ -62,13 +62,16 @@ jobs:
         run: flutter clean
         shell: bash
 
-      - name: Prepare iOS pods
+      - name: Prepare iOS
         run: |
+          flutter pub get
+          flutter precache
           cd ios
           rm -rf Pods Podfile.lock
           pod repo update
           pod install --repo-update
         shell: bash
+
 
       - name: Build IPA
         run: |
