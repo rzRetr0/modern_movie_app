@@ -1,7 +1,7 @@
 name: Build iOS IPA
 
 on:
-  workflow_dispatch: # manual run
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -22,21 +22,20 @@ jobs:
           flutter-version: '3.29.0'
           channel: stable
 
-      # 3. Install dependencies
+      # 3. Get Flutter dependencies
       - name: Flutter pub get
         run: flutter pub get
 
-      # 4. Fix CocoaPods + xcodeproj versions
-      - name: Fix CocoaPods + xcodeproj
+      # 4. Install compatible CocoaPods & xcodeproj
+      - name: Install CocoaPods & xcodeproj
         run: |
           sudo gem uninstall cocoapods -aIx || true
           sudo gem uninstall xcodeproj -aIx || true
           sudo gem install cocoapods -v 1.15.2 --no-document
           sudo gem install xcodeproj -v 1.25.0 --no-document
-          pod --version
-          gem list xcodeproj
+          pod repo update
 
-      # 5. Clean & install Pods
+      # 5. Clean Pods and install
       - name: Clean and install Pods
         run: |
           cd ios
@@ -48,7 +47,7 @@ jobs:
       - name: Build IPA
         run: flutter build ipa --no-codesign
 
-      # 7. Upload IPA artifact
+      # 7. Upload IPA as artifact
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
