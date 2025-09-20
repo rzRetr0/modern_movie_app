@@ -26,11 +26,13 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      # 4. Update CocoaPods + xcodeproj for Xcode 16
-      - name: Update CocoaPods & xcodeproj
+      # 4. Install stable CocoaPods & xcodeproj
+      - name: Install CocoaPods & xcodeproj
         run: |
+          sudo gem uninstall cocoapods -aIx || true
+          sudo gem uninstall xcodeproj -aIx || true
           sudo gem install cocoapods -v 1.15.2 --no-document
-          sudo gem install xcodeproj -v 1.27.0 --no-document
+          sudo gem install xcodeproj -v 1.25.0 --no-document
           pod repo update
 
       # 5. Clean & reinstall pods
