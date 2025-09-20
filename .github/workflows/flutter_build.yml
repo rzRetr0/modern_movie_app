@@ -1,33 +1,27 @@
-name: Build iOS IPA
+name: Flutter iOS Build
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
   build-ios:
     runs-on: macos-latest
-
+    env:
+      FLUTTER_ROOT: /Users/runner/hostedtoolcache/flutter/stable
+      PUB_CACHE: /Users/runner/.pub-cache
     steps:
-      # 1. Checkout repo
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      # 2. Setup Flutter
-      - name: Setup Flutter
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.0'
-          channel: stable
 
-      # 3. Get Flutter dependencies
-      - name: Flutter pub get
-        run: flutter pub get
-
-      # 4. Install compatible CocoaPods & xcodeproj
-      - name: Install CocoaPods & xcodeproj
+      - name: Install CocoaPods + xcodeproj (compatible versions)
         run: |
           sudo gem uninstall cocoapods -aIx || true
           sudo gem uninstall xcodeproj -aIx || true
@@ -35,21 +29,15 @@ jobs:
           sudo gem install xcodeproj -v 1.25.0 --no-document
           pod repo update
 
-      # 5. Clean Pods and install
-      - name: Clean and install Pods
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Clean iOS Pods
         run: |
           cd ios
           rm -rf Pods Podfile.lock
           pod install --repo-update
           cd ..
 
-      # 6. Build IPA (unsigned)
-      - name: Build IPA
-        run: flutter build ipa --no-codesign
-
-      # 7. Upload IPA as artifact
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-ipa
-          path: build/ios/ipa/*.ipa
+      - name: Build iOS app
+        run: flutter build ios --no-codesign
