@@ -1,47 +1,101 @@
-name: Build Unsigned iOS IPA
+name: Flutter Build
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # manual trigger
 
 jobs:
-  build_ios_unsigned:
-    runs-on: macos-latest
+  build-android:
+    name: Build Android APK & AAB
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.0'
-          channel: 'stable'
 
-      - name: Install Flutter dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Clean iOS build
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Build AppBundle
+        run: flutter build appbundle --release
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-builds
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+
+  build-web:
+    name: Build Web App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        run: flutter build web --release
+
+      - name: Upload Web artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Clean Flutter project
         run: flutter clean
 
-      - name: Prepare iOS pods
+      - name: Clean and regenerate iOS project
         run: |
-          cd ios
-          pod install --repo-update
-          cd ..
+          echo "🧹 Cleaning iOS project..."
+          rm -rf ios/Pods ios/Podfile.lock build/ios
+          flutter create --platforms=ios --org com.movieapp .
 
-      - name: Build unsigned iOS app
-        run: flutter build ios --no-codesign --release
-
-      - name: Package IPA
+      - name: Build iOS IPA
         run: |
-          IPA_PATH="build/ios/iphoneos/Runner.ipa"
-          mkdir -p $(dirname $IPA_PATH)
-          xcrun -sdk iphoneos PackageApplication -v build/ios/iphoneos/Runner.app -o $IPA_PATH
+          flutter build ipa \
+          --export-options-plist=ios/ExportOptions.plist \
+          --no-codesign
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: unsigned-ipa
-          path: build/ios/iphoneos/Runner.ipa
+          name: ios-ipa
+          path: build/ios/ipa/*.ipa

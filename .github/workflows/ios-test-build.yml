@@ -29,6 +29,12 @@ jobs:
       - name: Flutter clean
         run: flutter clean
 
+      - name: Clean and regenerate iOS project
+        run: |
+          echo "🧹 Cleaning iOS project to fix Windows path corruption..."
+          rm -rf ios/Pods ios/Podfile.lock build/ios
+          flutter create --platforms=ios --org com.movieapp .
+
       - name: Test Flutter iOS build
         run: |
           echo "🧪 Testing Flutter iOS build..."
