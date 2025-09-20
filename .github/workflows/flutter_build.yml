@@ -7,35 +7,34 @@ on:
   pull_request:
 
 jobs:
-  build-ios:
+  build_ios:
     runs-on: macos-latest
-    env:
-      FLUTTER_ROOT: /Users/runner/hostedtoolcache/flutter/stable
-      PUB_CACHE: /Users/runner/.pub-cache
+
     steps:
-      - name: Checkout repo
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0'
+          flutter-version: 3.29.0
 
-      - name: Install CocoaPods + xcodeproj (compatible versions)
-        run: |
-          sudo gem uninstall cocoapods -aIx || true
-          sudo gem uninstall xcodeproj -aIx || true
-          sudo gem install cocoapods -v 1.15.2 --no-document
-          sudo gem install xcodeproj -v 1.25.0 --no-document
-          pod repo update
-
-      - name: Install Flutter dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: Clean iOS Pods
+      - name: Install specific CocoaPods + xcodeproj
+        run: |
+          sudo gem install cocoapods -v 1.15.2
+          sudo gem install xcodeproj -v 1.25.0
+
+      - name: Clean iOS build + Pods
+        run: |
+          flutter clean
+          rm -rf ios/Pods ios/Podfile.lock ios/Runner.xcworkspace
+
+      - name: Rebuild iOS workspace and install Pods
         run: |
           cd ios
-          rm -rf Pods Podfile.lock
           pod install --repo-update
           cd ..
 
