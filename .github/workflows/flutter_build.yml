@@ -30,7 +30,7 @@ jobs:
       - name: Update CocoaPods & xcodeproj
         run: |
           sudo gem install cocoapods -v 1.15.2 --no-document
-          sudo gem install xcodeproj -v 1.28.0 --no-document
+          sudo gem install xcodeproj -v 1.27.0 --no-document
           pod repo update
 
       # 5. Clean & reinstall pods
