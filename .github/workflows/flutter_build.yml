@@ -13,41 +13,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Flutter
+      - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.29.0' # match your local version
+          flutter-version: '3.29.0'
           channel: 'stable'
 
-      - name: Install CocoaPods 1.16.1
-        run: |
-          sudo gem install cocoapods -v 1.16.1
-          pod --version
-
-      - name: Flutter pub get
+      - name: Install Flutter dependencies
         run: flutter pub get
 
       - name: Clean iOS build
+        run: flutter clean
+
+      - name: Prepare iOS pods
         run: |
-          flutter clean
           cd ios
-          rm -rf Pods Podfile.lock
           pod install --repo-update
           cd ..
 
-      - name: Build iOS app without codesigning
-        run: flutter build ios --no-codesign
+      - name: Build unsigned iOS app
+        run: flutter build ios --no-codesign --release
 
       - name: Package IPA
         run: |
-          APP_NAME="modern_movie_app" # replace with your app's name
-          PAYLOAD_DIR="Payload"
-          mkdir -p $PAYLOAD_DIR
-          cp -r build/ios/iphoneos/$APP_NAME.app $PAYLOAD_DIR/
-          zip -r $APP_NAME.ipa $PAYLOAD_DIR
+          IPA_PATH="build/ios/iphoneos/Runner.ipa"
+          mkdir -p $(dirname $IPA_PATH)
+          xcrun -sdk iphoneos PackageApplication -v build/ios/iphoneos/Runner.app -o $IPA_PATH
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: unsigned-ipa
-          path: modern_movie_app.ipa
+          path: build/ios/iphoneos/Runner.ipa
